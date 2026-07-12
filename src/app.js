@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
+const mongoose = require('mongoose');
 const { connectDB } = require('./config/db');
 const AppError = require('./utils/AppError');
 const logger = require('./utils/logger');
@@ -36,6 +37,16 @@ app.use('/api/auth',    require('./routes/auth.routes'));
 app.use('/api/clients', require('./routes/client.routes'));
 app.use('/api/users',   require('./routes/user.routes'));
 app.use('/api/stats',   require('./routes/stats.routes'));
+
+app.get('/api/health/db', async (req, res) => {
+  try {
+    await mongoose.connection.db.admin().command({ ping: 1 });
+    res.status(200).json({ success: true, message: 'Database reachable' });
+  } catch (err) {
+    logger.error('Database health check failed', err);
+    res.status(503).json({ success: false, message: 'Database unreachable' });
+  }
+});
 
 app.use((req, res, next) => {
   next(new AppError(`Route ${req.originalUrl} not found`, 404));
